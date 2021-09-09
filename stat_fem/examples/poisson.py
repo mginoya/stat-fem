@@ -1,3 +1,11 @@
+import os, sys
+currentdir = os.path.dirname(os.path.realpath(__file__))
+parentdir = os.path.dirname(currentdir)
+maindir = os.path.abspath(os.path.join(parentdir, os.pardir))
+sys.path.append(maindir)
+
+import tkinter
+
 import numpy as np
 from firedrake import UnitSquareMesh, FunctionSpace, TrialFunction, TestFunction
 from firedrake import SpatialCoordinate, dx, pi, sin, dot, grad, DirichletBC
@@ -5,14 +13,16 @@ from firedrake import assemble, Function, solve
 import stat_fem
 from stat_fem.covariance_functions import sqexp
 try:
+    import matplotlib
     import matplotlib.pyplot as plt
+    matplotlib.use('TkAgg')
     makeplots = True
 except ImportError:
     makeplots = False
 
 # Set up base FEM, which solves Poisson's equation on a square mesh
 
-nx = 101
+nx = 100
 
 mesh = UnitSquareMesh(nx - 1, nx - 1)
 V = FunctionSpace(mesh, "CG", 1)
@@ -26,6 +36,8 @@ f.interpolate((8*pi*pi)*sin(x[0]*pi*2)*sin(x[1]*pi*2))
 
 a = (dot(grad(v), grad(u))) * dx
 L = f * v * dx
+print(dir(L))
+print(L.constants)
 
 bc = DirichletBC(V, 0., "on_boundary")
 
@@ -111,13 +123,12 @@ print(np.array([rho, sigma_eta, l_eta]))
 # solve for posterior FEM solution conditioned on data
 
 muy = Function(V)
-
 # solve_posterior computes the full solution on the FEM grid using a Firedrake function
 # the scale_mean option will ensure that the output is scaled to match
 # the data rather than the FEM soltuion
 
 ls.solve_posterior(muy, scale_mean=True)
-
+err = np.subtract(u.vector().dat.data, muy.vector().dat.data)
 # covariance can only be computed for a select number of locations as covariance is a dense matrix
 # function returns the mean/covariance as numpy arrays, not Firedrake functions
 
@@ -133,4 +144,21 @@ if makeplots:
     plt.scatter(x_data[:,0], x_data[:,1], c = np.diag(Cuy), cmap="Greys_r")
     plt.colorbar()
     plt.title("Posterior FEM solution and uncertainty")
+    
+    plt.figure()
+    plt.tripcolor(mesh.coordinates.vector().dat.data[:,0], 
+                  mesh.coordinates.vector().dat.data[:,1], 
+                  err)
+
+    plt.colorbar()
+    plt.title("Difference between FEM Solutions: Prior - Posterior")
+
+    #plt.figure()
+    #plt.tripcolor(mesh.coordinates.vector().dat.data[:,0], 
+    #              mesh.coordinates.vector().dat.data[:,1], 
+    #              v.vector().dat.data)
+
+    #plt.colorbar()
+    #plt.title("F Function: Whatever that is ... ")
     plt.show()
+
