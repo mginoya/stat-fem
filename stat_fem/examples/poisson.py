@@ -89,9 +89,13 @@ if makeplots:
     plt.figure()
     plt.tripcolor(mesh.coordinates.vector().dat.data[:,0], mesh.coordinates.vector().dat.data[:,1],
                   u.vector().dat.data)
-    plt.colorbar()
+    cbar1 = plt.colorbar()
+    cbar1.ax.set_ylabel("Prior FEM Solution", rotation=270, labelpad=10) 
+
     plt.scatter(x_data[:,0], x_data[:,1], c = y, cmap="Greys_r")
-    plt.colorbar()
+    cbar2 = plt.colorbar()
+    cbar2.ax.set_ylabel("Emulated Sensor Data", rotation=270, labelpad=10)
+
     plt.title("Prior FEM solution and data")
 
 # Begin stat-fem solution
@@ -121,36 +125,42 @@ print(np.array([rho, sigma_eta, l_eta]))
 # posterior FEM solution conditioned on the data
 
 # solve for posterior FEM solution conditioned on data
-
 muy = Function(V)
+
 # solve_posterior computes the full solution on the FEM grid using a Firedrake function
 # the scale_mean option will ensure that the output is scaled to match
 # the data rather than the FEM soltuion
-
 ls.solve_posterior(muy, scale_mean=True)
 err = np.subtract(u.vector().dat.data, muy.vector().dat.data)
+
 # covariance can only be computed for a select number of locations as covariance is a dense matrix
 # function returns the mean/covariance as numpy arrays, not Firedrake functions
-
 muy2, Cuy = ls.solve_posterior_covariance()
 
 # visualize posterior FEM solution and uncertainty
 
 if makeplots:
     plt.figure()
-    plt.tripcolor(mesh.coordinates.vector().dat.data[:,0], mesh.coordinates.vector().dat.data[:,1],
+    plt.tripcolor(mesh.coordinates.vector().dat.data[:,0], 
+                  mesh.coordinates.vector().dat.data[:,1],
                   muy.vector().dat.data)
-    plt.colorbar()
+    cbar1 = plt.colorbar()
+    cbar1.ax.set_ylabel("Posterior FEM Solution", rotation=270, labelpad=10)
+
     plt.scatter(x_data[:,0], x_data[:,1], c = np.diag(Cuy), cmap="Greys_r")
-    plt.colorbar()
+    cbar2 = plt.colorbar()
+    cbar2.ax.set_ylabel("Uncertainty", rotation=270, labelpad=10)
+
     plt.title("Posterior FEM solution and uncertainty")
     
     plt.figure()
     plt.tripcolor(mesh.coordinates.vector().dat.data[:,0], 
                   mesh.coordinates.vector().dat.data[:,1], 
-                  err)
+                  err, 
+                  cmap='seismic')
 
-    plt.colorbar()
+    cbar3 = plt.colorbar()
+    cbar3.ax.set_ylabel("Prior - Posterior (Difference)", rotation=270, labelpad=10)
     plt.title("Difference between FEM Solutions: Prior - Posterior")
 
     #plt.figure()
